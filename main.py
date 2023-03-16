@@ -1,10 +1,11 @@
 import json
 import os
-import telebot
-import texts
-import httpx
 
+import httpx
+import telebot
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
+
+import texts
 
 bot = telebot.TeleBot(os.environ.get('TG_BOT_TOKEN'))
 
@@ -15,17 +16,45 @@ def say_welcome(message):
     send_menu_message(message)
 
 
+@bot.message_handler(commands=['task'])
+def say_welcome(message):
+    send_task_message(message)
+
+
+@bot.message_handler(commands=['poem'])
+def say_welcome(message):
+    send_random_poem_message(message)
+
+
+@bot.message_handler(commands=['menu'])
+def say_welcome(message):
+    send_menu_message(message)
+
+
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
     match call.data:
         case 'callback_poem':
             send_random_poem_message(call.message)
         case 'callback_task':
-            bot.send_message(call.message.chat.id, "задание", parse_mode="markdown")
+            send_task_message(call.message)
+        case 'callback_answer':
+            send_answer_message(call.message)
         case 'callback_menu':
             send_menu_message(call.message)
         case _:
             send_menu_message(call.message)
+
+
+@bot.message_handler(func=lambda message: True)
+def check_answer(message):
+    result = check_answer(message, message.text.lower())['result']
+    if result:
+        bot.send_message(message.chat.id, "✅ Правильно. Продолжим...", parse_mode="markdown")
+        send_task_message(message)
+    else:
+        text = '🙁Неверно.\nПопробуй еще раз, или нажми узнать ответ под сообщением с заданием.'
+        bot.send_message(message.chat.id, text, parse_mode="markdown")
 
 
 def send_menu_message(message):
@@ -39,13 +68,6 @@ def send_menu_message(message):
 
 
 def send_random_poem_message(message):
-    poem = get_random_poem(message)
-    poem_text = str(poem['poem_template'])\
-        .replace('{1}', f'*{poem["first"]}*')\
-        .replace('{2}', f'*{poem["second"]}*')\
-        .replace('{3}', f'*{poem["third"]}*')
-    poem_text = f'{poem_text}\n_({poem["ru"]})_'
-
     keyboard = InlineKeyboardMarkup()
     keyboard.row_width = 2
     keyboard.add(
@@ -53,16 +75,75 @@ def send_random_poem_message(message):
         InlineKeyboardButton("Меню", callback_data="callback_menu")
     )
 
+    poem_text = create_poem_text(get_random_poem(message))
     bot.send_message(message.chat.id, poem_text, parse_mode="markdown", reply_markup=keyboard)
 
 
+def send_task_message(message):
+    keyboard = InlineKeyboardMarkup()
+    keyboard.row_width = 2
+    keyboard.add(
+        InlineKeyboardButton("Узнать ответ", callback_data="callback_answer"),
+        InlineKeyboardButton("Меню", callback_data="callback_menu")
+    )
+
+    task = get_task(message)
+    task[task['expected_verb_form']] = '❓'
+    task_text = f'{task["first"]} - {task["second"]} - {task["third"]}\n_({task["ru"]})_'
+    bot.send_message(message.chat.id, task_text, parse_mode="markdown", reply_markup=keyboard)
+
+
+def send_answer_message(message):
+    answer_text = create_poem_text(get_answer(message))
+
+    bot.send_message(message.chat.id, answer_text, parse_mode="markdown")
+    send_task_message(message)
+
+
+def create_poem_text(poem):
+    poem_text = str(poem['poem_template']) \
+        .replace('{1}', f'*{poem["first"]}*') \
+        .replace('{2}', f'*{poem["second"]}*') \
+        .replace('{3}', f'*{poem["third"]}*')
+    poem_text = f'{poem_text}\n_({poem["ru"]})_'
+
+    return poem_text
+
+
 def get_random_poem(message):
-    params = {
+    return execute_request(params={
         'user_type': 'tg',
         'user_id': message.chat.id,
         'action': 'poem'
-    }
+    })
 
+
+def get_task(message):
+    return execute_request(params={
+        'user_type': 'tg',
+        'user_id': message.chat.id,
+        'action': 'task'
+    })
+
+
+def get_answer(message):
+    return execute_request(params={
+        'user_type': 'tg',
+        'user_id': message.chat.id,
+        'action': 'answer'
+    })
+
+
+def check_answer(message, answer):
+    return execute_request(params={
+        'user_type': 'tg',
+        'user_id': message.chat.id,
+        'action': 'check',
+        'answer': answer
+    })
+
+
+def execute_request(params):
     return json.loads(
         httpx.get('https://functions.yandexcloud.net/d4eusbc3q00ksanqgeqi', params=params).text
     )
