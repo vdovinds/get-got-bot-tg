@@ -16,5 +16,5 @@ jobs:
         runtime: 'python311'
         memory: '128'
         entrypoint: 'handler.handler'
-        environment: BOT_TOKEN=${{ secrets.TG_BOT_TOKEN }}
+        environment: TG_BOT_TOKEN=${{ secrets.TG_BOT_TOKEN }}
         source: '.'
