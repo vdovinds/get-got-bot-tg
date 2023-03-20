@@ -48,12 +48,12 @@ def callback_query(call):
 
 @bot.message_handler(func=lambda message: True)
 def check_answer(message):
-    result = check_answer(message, message.text.lower())['result']
+    result = check(message, message.text.lower())['result']
     if result:
-        bot.send_message(message.chat.id, "✅ Правильно. Продолжим...", parse_mode="markdown")
+        bot.send_message(message.chat.id, "✅ Correct. Next...\n\n_Правильно. Продолжим..._", parse_mode="markdown")
         send_task_message(message)
     else:
-        text = '🙁Неверно.\nПопробуй еще раз, или нажми узнать ответ под сообщением с заданием.'
+        text = '🙁Wrong. Try again.\n\n_Неверно. Попробуй еще раз, или нажми узнать ответ под сообщением с заданием._'
         bot.send_message(message.chat.id, text, parse_mode="markdown")
 
 
@@ -61,8 +61,8 @@ def send_menu_message(message):
     keyboard = InlineKeyboardMarkup()
     keyboard.row_width = 2
     keyboard.add(
-        InlineKeyboardButton("🔮Учить стих", callback_data="callback_poem"),
-        InlineKeyboardButton("🏋Тренировать", callback_data="callback_task")
+        InlineKeyboardButton("🔮Learn", callback_data="callback_poem"),
+        InlineKeyboardButton("🏋Practice", callback_data="callback_task")
     )
     bot.send_message(message.chat.id, texts.menu_text, parse_mode="markdown", reply_markup=keyboard)
 
@@ -71,8 +71,8 @@ def send_random_poem_message(message):
     keyboard = InlineKeyboardMarkup()
     keyboard.row_width = 2
     keyboard.add(
-        InlineKeyboardButton("🔮Еще...", callback_data="callback_poem"),
-        InlineKeyboardButton("Меню", callback_data="callback_menu")
+        InlineKeyboardButton("🔮Next...", callback_data="callback_poem"),
+        InlineKeyboardButton("Menu", callback_data="callback_menu")
     )
 
     poem_text = create_poem_text(get_random_poem(message))
@@ -83,8 +83,8 @@ def send_task_message(message):
     keyboard = InlineKeyboardMarkup()
     keyboard.row_width = 2
     keyboard.add(
-        InlineKeyboardButton("Узнать ответ", callback_data="callback_answer"),
-        InlineKeyboardButton("Меню", callback_data="callback_menu")
+        InlineKeyboardButton("Answer", callback_data="callback_answer"),
+        InlineKeyboardButton("Menu", callback_data="callback_menu")
     )
 
     task = get_task(message)
@@ -134,7 +134,7 @@ def get_answer(message):
     })
 
 
-def check_answer(message, answer):
+def check(message, answer):
     return execute_request(params={
         'user_type': 'tg',
         'user_id': message.chat.id,
