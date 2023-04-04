@@ -114,7 +114,11 @@ def get_random_poem(message):
     return execute_request(params={
         'user_type': 'tg',
         'user_id': message.chat.id,
-        'action': 'poem'
+        'action': 'poem',
+        'user_info': {
+            'login': message.chat.username,
+            'name': message.chat.first_name
+        }
     })
 
 
@@ -122,7 +126,11 @@ def get_task(message):
     return execute_request(params={
         'user_type': 'tg',
         'user_id': message.chat.id,
-        'action': 'task'
+        'action': 'task',
+        'user_info': {
+            'login': message.chat.username,
+            'name': message.chat.first_name
+        }
     })
 
 
